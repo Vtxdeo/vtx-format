@@ -45,3 +45,63 @@ pub fn decode(bytes: &[u8]) -> Result<(u8, &[u8]), VtxFormatError> {
         other => Err(VtxFormatError::UnsupportedVersion(other)),
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_encode_v1_structure() {
+        let payload = b"wasm-magic";
+        let encoded = encode_v1(payload);
+
+        // 验证头部魔数
+        assert_eq!(&encoded[0..4], &VTX_MAGIC_V1);
+        // 验证负载内容
+        assert_eq!(&encoded[4..], payload);
+    }
+
+    #[test]
+    fn test_decode_valid_v1() {
+        let payload = b"component-data";
+        let mut data = Vec::new();
+        data.extend_from_slice(&VTX_MAGIC_V1);
+        data.extend_from_slice(payload);
+
+        let result = decode(&data);
+        assert!(result.is_ok());
+        let (version, body) = result.unwrap();
+
+        assert_eq!(version, VTX_VERSION_V1);
+        assert_eq!(body, payload);
+    }
+
+    #[test]
+    fn test_decode_too_short() {
+        let data = b"VTX"; // 只有 3 字节
+        let result = decode(data);
+        assert!(matches!(result, Err(VtxFormatError::TooShort)));
+    }
+
+    #[test]
+    fn test_decode_invalid_prefix() {
+        // 错误的头部：VTY\x01
+        let data = b"VTY\x01payload";
+        let result = decode(data);
+        assert!(matches!(result, Err(VtxFormatError::InvalidPrefix)));
+    }
+
+    #[test]
+    fn test_decode_unsupported_version() {
+        // 版本号为 0x02
+        let data = b"VTX\x02payload";
+        let result = decode(data);
+
+        if let Err(VtxFormatError::UnsupportedVersion(v)) = result {
+            assert_eq!(v, 2);
+        } else {
+            panic!("Should return UnsupportedVersion error");
+        }
+    }
+}

@@ -1,0 +1,60 @@
+name: vtx-format CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'vtx-format/**'
+      - '.github/workflows/format-ci.yml'
+    tags: [ "vtx-format-v*" ]
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'vtx-format/**'
+
+env:
+  CARGO_TERM_COLOR: always
+  WORKING_DIR: ./vtx-format
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: vtx-format
+
+      - name: Check Formatting
+        working-directory: ${{ env.WORKING_DIR }}
+        run: cargo fmt -- --check
+
+      - name: Run Clippy
+        working-directory: ${{ env.WORKING_DIR }}
+        run: cargo clippy -- -D warnings
+
+      - name: Run Tests
+        working-directory: ${{ env.WORKING_DIR }}
+        run: cargo test --verbose
+
+  publish:
+    name: Publish to Crates.io
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/vtx-format-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Login to Crates.io
+        run: cargo login ${{ secrets.CRATES_TOKEN }}
