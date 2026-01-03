@@ -154,7 +154,10 @@ mod tests {
     fn test_decode_unsupported_version() {
         let data = b"VTX\x99payload";
         let result = decode(data);
-        assert!(matches!(result, Err(VtxFormatError::UnsupportedVersion(0x99))));
+        assert!(matches!(
+            result,
+            Err(VtxFormatError::UnsupportedVersion(0x99))
+        ));
     }
 
     #[test]
@@ -167,4 +170,3 @@ mod tests {
         assert!(matches!(result, Err(VtxFormatError::InvalidMetadataLength)));
     }
 }
-
