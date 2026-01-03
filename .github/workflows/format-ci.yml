@@ -59,5 +59,20 @@ jobs:
       - name: Login to Crates.io
         run: cargo login ${{ secrets.CRATES_TOKEN }}
 
+      - name: Inject version from Git tag
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/vtx-format-v}
+
+          if [ -z "$VERSION" ]; then
+            echo "Error: Failed to extract version from ref: $GITHUB_REF"
+            exit 1
+          fi
+          
+          echo "Injecting version: $VERSION"
+          sed -i "0,/^version = .*/s//version = \"$VERSION\"/" Cargo.toml
+
+          grep "^version" Cargo.toml | head -n 1
+
       - name: Publish crate
         run: cargo publish --allow-dirty
